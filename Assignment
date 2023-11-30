@@ -1,0 +1,653 @@
+1.1 Backward Difference
+>>> import numpy as np
+>>> def backward_difference(x, y):
+...     if x.size < 2 or y.size < 2:
+...             raise ValueError("'x' and 'y' arrays must have 2 values or more.")
+...     if x.size != y.size:
+...             raise ValueError("'x' and 'y' must have same size.")
+...     def dy_difference(h, y0, y1):
+...             return (y1 - y0) / h
+...     n = x.size
+...     dy = np.zeros(n)
+...     for i in range(0, n):
+...             if i == n - 1:
+...                     hx = x[i] - x[i - 1]
+...                     dy[i] = dy_difference(-hx, y[i], y[i - 1])
+...             else:
+...                     hx = x[i + 1] - x[i]
+...                     dy[i] = dy_difference(hx, y[i], y[i + 1])
+...     return dy
+...
+>>> x = np.array([0.0, 0.2, 0.4])
+>>> y = np.array([0.00000, 0.74140, 1.3718])
+>>> result = backward_difference(x, y)
+>>> print(result)
+[3.707 3.152 3.152]
+
+1.2 Three Points
+>>> def three_point(x, y):
+...     if x.size < 3 or y.size < 3:
+...             raise ValueError("'x' and 'y' arrays must have 3 values or more.")
+...     if x.size != y.size:
+...             raise ValueError("'x' and 'y' must have same size.")
+...     def dy_mid(h, y0, y2):
+...             return (1 / (2 * h)) * (y2 - y0)
+...     def dy_end(h, y0, y1, y2):
+...             return (1 / (2 * h)) * (-3 * y0 + 4 * y1 - y2)
+...     hx = x[1] - x[0]
+...     n = x.size
+...     dy = np.zeros(n)
+...     for i in range(0, n):
+...             if i == 0:
+...                     dy[i] = dy_end(hx, y[i], y[i + 1], y[i + 2])
+...             elif i == n - 1:
+...                     dy[i] = dy_end(-hx, y[i], y[i - 1], y[i - 2])
+...             else:
+...                     dy[i] = dy_mid(hx, y[i - 1], y[i + 1])
+...     return dy
+...
+>>> x = np.array([1.1, 1.2, 1.3, 1.4])
+>>> y = np.array([9.025013, 11.02318, 13.46374, 16.44465])
+>>> result = three_point(x, y)
+>>> print(result)
+[17.769705 22.193635 27.10735  32.51085 ]
+
+1.3 Five Points
+>>> def five_point(x, y):
+...     if x.size < 6 or y.size < 6:
+...             raise ValueError("'x' and 'y' must have same size.")
+...     def dy_mid(h, y0, y1, y3, y4):
+...             return (1 / (12 * h)) * (y0 - 8 * y1 + 8 * y3 - y4)
+...     def dy_end(h, y0, y1, y2, y3, y4):
+...             return (1 / (12 * h)) * \
+...                     (-25 * y0 + 48 * y1 - 36 * y2 + 16 * y3 - 3 * y4)
+...     hx = x[1] - x[0]
+...     n = x.size
+...     dy = np.zeros(n)
+...     for i in range(0, n):
+...             if i in (0, 1):
+...                     dy[i] = dy_end(hx, y[i], y[i + 1], y[i + 2], y[i + 3], y[i + 4])
+...             elif i in (n - 1, n - 2):
+...                     dy[i] = dy_end(-hx, y[i], y[i - 1], y[i - 2], y[i - 3], y[i - 4])
+...             else:
+...                     dy[i] = dy_mid(hx, y[i - 2], y[i - 1], y[i + 1], y[i + 2])
+...     return dy
+...
+>>> x = np.array([2.1, 2.2, 2.3, 2.4, 2.5, 2.6])
+>>> y = np.array([-1.709847, -1.373823, -1.119214, -0.9160143, -0.7470223, -0.6015966])
+>>> result = five_point(x, y)
+>>> print(result)
+[3.89934425 2.87687567 2.24970408 1.837756   1.54420992 1.35549633]
+
+2.1 Improved euler’s method
+	a. Main or “Driver” Program
+import numpy as np
+import matplotlib.pyplot as plt
+
+def euler_step(x, y, h):
+    y_new = y + h * f(x, y)
+    return y_new
+
+def f(x, y):
+    return x * y
+
+def integrator(x, y, h, x_end):
+    while x < x_end:
+        if x + h > x_end:
+            h = x_end - x
+        y = euler_step(x, y, h)
+        x += h
+    return x, y
+
+def main_driver(x_initial, y_initial, x_final, dx, x_output_interval):
+  
+    x_values = [x_initial]
+    y_values = [y_initial]
+
+    x = x_initial
+    m = 0
+    x_prev_output = x
+    y_prev_output = y_initial
+
+    while x <= x_final:
+        x_end = x + x_output_interval
+        if x_end > x_final:
+            x_end = x_final
+
+        h = dx
+        x_result, y_result = integrator(x, y_values[-1], h, x_end)
+
+        m += 1
+        x_prev_output = x
+        y_prev_output = y_values[-1]
+
+        x_values.append(x_result)
+        y_values.append(y_result)
+
+        if x >= x_final:
+            break
+
+    display_results(x_values, y_values)
+
+def display_results(x_values, y_values):
+    
+    for i in range(len(x_values)):
+        print(f"Iteration {i + 1}: x = {x_values[i]}, y = {y_values[i]}")
+
+    plt.plot(x_values, y_values, marker='o', linestyle='-', color='b')
+    plt.xlabel('x')
+    plt.ylabel('y')
+    plt.title('Improved Euler Method Integration')
+    plt.show()
+
+x_initial_value = 0.0
+y_initial_value = 0.0
+
+x_final_value = 0.4
+dx_step = 0.1
+x_output_interval_value = 0.2
+
+main_driver(x_initial_value, y_initial_value, x_final_value, dx_step, x_output_interval_value)rogram
+
+b. Routine to Take One Output Step
+import numpy as np
+import matplotlib.pyplot as plt
+
+def euler_step(x, y, h):
+    y_new = y + h * f(x, y)
+    return y_new
+
+def f(x, y):
+    return x * y
+
+def integrator(x, y, h, x_end):
+    while x < x_end:
+        if x + h > x_end:
+            h = x_end - x
+        y = euler_step(x, y, h)
+        x += h
+    return x, y
+
+x_values = np.array([0.0, 0.2, 0.4])
+y_values = np.array([0.00000, 0.74140, 1.3718])
+
+h_step = 0.1
+x_end_value = 1.0
+
+for i in range(len(x_values) - 1):
+    x_start, y_start = x_values[i], y_values[i]
+    x_end, y_end = x_values[i + 1], y_values[i + 1]
+
+    x_result, y_result = integrator(x_start, y_start, h_step, x_end)
+
+    x_values[i + 1] = x_result
+    y_values[i + 1] = y_result
+
+plt.plot(x_values, y_values, marker='o', linestyle='-', color='b')
+plt.xlabel('x')
+plt.ylabel('y')
+plt.title('Euler Method Integration')
+plt.show()	
+c. Euler’s Method for a Single ODE
+import numpy as np
+import matplotlib.pyplot as plt
+
+def derivs(x, y, dydx):
+    # Define the derivative function (modify according to your ODE)
+    dydx[0] = x * y[0]
+
+def euler_step(x, y, h):
+    # Implement the Euler step
+    dydx = np.zeros_like(y)
+    derivs(x, y, dydx)
+    y_new = y + dydx * h
+    x_new = x + h
+    return x_new, y_new
+
+def euler_integrator(x_initial, y_initial, h, x_final):
+    # Euler integrator for a single ODE
+    x_values = [x_initial]
+    y_values = [y_initial]
+
+    x = x_initial
+    y = y_initial
+
+    while x < x_final:
+        x, y = euler_step(x, y, h)
+        x_values.append(x)
+        y_values.append(y)
+
+    return x_values, y_values
+
+x_initial_value = 0.0
+y_initial_value = np.array([0.0])  # Modify for your specific ODE
+
+h_step = 0.1
+x_final_value = 0.4
+
+x_result, y_result = euler_integrator(x_initial_value, y_initial_value, h_step, x_final_value)
+
+for i in range(len(x_result)):
+    print(f"Iteration {i + 1}: x = {x_result[i]}, y = {y_result[i][0]}")
+
+plt.plot(x_result, [y[0] for y in y_result], marker='o', linestyle='-', color='b')
+plt.xlabel('x')
+plt.ylabel('y')
+plt.title('Euler Method Integration for a Single ODE')
+plt.show()
+
+d. Routine to Determine Derivative
+import numpy as np
+import matplotlib.pyplot as plt
+
+def derivs(x, y, dydx):
+    dydx[0] = x * y[0]  # Example ODE: dy/dx = x * y
+
+def euler_step(x, y, h):
+    dydx = np.zeros_like(y)
+    derivs(x, y, dydx)
+    y_new = y + dydx * h
+    x_new = x + h
+    return x_new, y_new
+
+def euler_integrator(x_initial, y_initial, h, x_final):
+    x_values = [x_initial]
+    y_values = [y_initial]
+
+    x = x_initial
+    y = y_initial
+
+    while x < x_final:
+        x, y = euler_step(x, y, h)
+        x_values.append(x)
+        y_values.append(y)
+
+    return x_values, y_values
+
+x_initial_value = 0.0
+y_initial_value = np.array([0.0])  # Modify for your specific ODE
+
+h_step = 0.1
+x_final_value = 0.4
+
+x_result, y_result = euler_integrator(x_initial_value, y_initial_value, h_step, x_final_value)
+
+for i in range(len(x_result)):
+    print(f"Iteration {i + 1}: x = {x_result[i]}, y = {y_result[i][0]}")
+
+plt.plot(x_result, [y[0] for y in y_result], marker='o', linestyle='-', color='b')
+plt.xlabel('x')
+plt.ylabel('y')
+plt.title('Euler Method Integration for a Single ODE')
+plt.show()
+2.2 Heun’s method
+	a. Simple Heun without Corrector
+import numpy as np
+import matplotlib.pyplot as plt
+
+def derivs(x, y, dydx):
+    dydx[0] = x * y[0]  # Example ODE: dy/dx = x * y
+
+def heun_step(x, y, h):
+    # Implement the Heun step without corrector
+    dy1dx = np.zeros_like(y)
+    derivs(x, y, dy1dx)
+
+    ye = y + dy1dx * h
+
+    dy2dx = np.zeros_like(y)
+    derivs(x + h, ye, dy2dx)
+
+    slope = (dy1dx + dy2dx) / 2.0
+    y_new = y + slope * h
+    x_new = x + h
+
+    return x_new, y_new
+
+def heun_integrator(x_initial, y_initial, h, x_final):
+    # Heun integrator without corrector for a single ODE
+    x_values = [x_initial]
+    y_values = [y_initial]
+
+    x = x_initial
+    y = y_initial
+
+    while x < x_final:
+        x, y = heun_step(x, y, h)
+        x_values.append(x)
+        y_values.append(y)
+
+    return x_values, y_values
+
+x_initial_value = 0.0
+y_initial_value = np.array([0.0])  # Modify for your specific ODE
+
+h_step = 0.1
+x_final_value = 0.4
+
+x_result, y_result = heun_integrator(x_initial_value, y_initial_value, h_step, x_final_value)
+
+for i in range(len(x_result)):
+    print(f"Iteration {i + 1}: x = {x_result[i]}, y = {y_result[i][0]}")
+
+plt.plot(x_result, [y[0] for y in y_result], marker='o', linestyle='-', color='b')
+plt.xlabel('x')
+plt.ylabel('y')
+plt.title('Heun Method Integration without Corrector for a Single ODE')
+plt.show()
+	b. Midpoint Method
+import numpy as np
+import matplotlib.pyplot as plt
+
+def derivs(x, y, dydx):
+    dydx[0] = x * y[0]  # Example ODE: dy/dx = x * y
+
+def midpoint_step(x, y, h):
+    dydx = np.zeros_like(y)
+    derivs(x, y, dydx)
+
+    ym = y + dydx * h / 2.0
+
+    dymdx = np.zeros_like(y)
+    derivs(x + h / 2.0, ym, dymdx)
+
+    y_new = y + dymdx * h
+    x_new = x + h
+
+    return x_new, y_new
+
+def midpoint_integrator(x_initial, y_initial, h, x_final):
+    x_values = [x_initial]
+    y_values = [y_initial]
+
+    x = x_initial
+    y = y_initial
+
+    while x < x_final:
+        x, y = midpoint_step(x, y, h)
+        x_values.append(x)
+        y_values.append(y)
+
+    return x_values, y_values
+
+x_initial_value = 0.0
+y_initial_value = np.array([0.0])  # Modify for your specific ODE
+
+h_step = 0.1
+x_final_value = 0.4
+
+x_result, y_result = midpoint_integrator(x_initial_value, y_initial_value, h_step, x_final_value)
+
+for i in range(len(x_result)):
+    print(f"Iteration {i + 1}: x = {x_result[i]}, y = {y_result[i][0]}")
+
+plt.plot(x_result, [y[0] for y in y_result], marker='o', linestyle='-', color='b')
+plt.xlabel('x')
+plt.ylabel('y')
+plt.title('Midpoint Method Integration for a Single ODE')
+plt.show()
+	c. Heun with Corrector
+import numpy as np
+
+def HeunIter(x, y, h):
+    es = 0.01
+    maxit = 20
+    
+    def HeunCorrector(x, y, h):
+        iter = 0
+        while iter < maxit:
+            yeold = y
+            Derivs(x + h, y, dy2dx)
+            slope = (dy1dx + dy2dx) / 2.0
+            y = y + slope * h
+            iter += 1
+            ea = abs((y - yeold) / y) * 100.0
+            if ea < es or iter > maxit:
+                break
+        return y
+
+    ynew = np.zeros_like(y)
+    for i in range(len(x) - 1):
+        dy1dx = (y[i + 1] - y[i]) / (x[i + 1] - x[i])
+        ye = y[i] + dy1dx * h
+        ynew[i + 1] = HeunCorrector(x[i], ye, h)
+    
+    return ynew
+
+x = np.array([0.0, 0.2, 0.4])
+y = np.array([0.00000, 0.74140, 1.3718])
+h = 0.2  # Adjust the step size as needed
+
+result = HeunIter(x, y, h)
+print("Result after Heun method with corrector:", result)
+2.3 (or 2.4) 
+	a. Main or “Driver” Program
+def MainProgram():
+    # Assign values for the problem
+    n = 3  # Number of equations
+    yii = np.array([0.0, 0.0, 0.0])  # Initial values of n dependent variables
+    xi = 0.0  # Initial value of the independent variable
+    xf = 0.4  # Final value of the independent variable
+    dx = 0.2  # Calculation step size
+    xout = 0.2  # Output interval
+    
+    x = xi
+    m = 0
+    
+    y = np.zeros(n)
+    for i in range(n):
+        y[i] = yii[i]
+    
+    while True:
+        xend = x + xout
+        if xend > xf:
+            xend = xf
+        h = dx
+        
+        Integrator(x, y, n, h, xend)
+        
+        m += 1
+        xi = x
+        for i in range(n):
+            yii[i] = y[i]
+        
+        if x >= xf:
+            break
+    
+    print("Results after integration:")
+    print("Final values of dependent variables:", y)
+
+MainProgram()
+	b. Routine to Take One Output Step
+import numpy as np
+
+def MainProgram():
+    n = 3  # Number of equations
+    yii = np.array([0.0, 0.0, 0.0])  # Initial values of n dependent variables
+    xi = 0.0  # Initial value of the independent variable
+    xf = 0.4  # Final value of the independent variable
+    dx = 0.2  # Calculation step size
+    xout = 0.2  # Output interval
+    
+    x = xi
+    m = 0
+    
+    y = np.zeros(n)
+    for i in range(n):
+        y[i] = yii[i]
+    
+    while True:
+        xend = x + xout
+        if xend > xf:
+            xend = xf
+        h = dx
+        
+        Integrator(x, y, n, h, xend)
+        
+        m += 1
+        xi = x
+        for i in range(n):
+            yii[i] = y[i]
+        
+        if x >= xf:
+            break
+    
+    print("Results after integration:")
+    print("Final values of dependent variables:", y)
+
+def Integrator(x, y, n, h, xend):
+    while True:
+        if xend - x < h:
+            h = xend - x
+        
+        RK4(x, y, n, h)
+        
+        if x >= xend:
+            break
+
+def RK4(x, y, n, h):
+MainProgram()
+	c. Fourth-Order RK Methos for a System of ODEs
+import numpy as np
+
+def RK4(x, y, n, h):
+    k1 = np.zeros(n)
+    k2 = np.zeros(n)
+    k3 = np.zeros(n)
+    k4 = np.zeros(n)
+    
+    Derivs(x, y, k1)
+    ym = y + k1 * h / 2.0
+    
+    Derivs(x + h / 2.0, ym, k2)
+    ym = y + k2 * h / 2.0
+    
+    Derivs(x + h / 2.0, ym, k3)
+    ye = y + k3 * h
+    
+    Derivs(x + h, ye, k4)
+    
+    for i in range(n):
+        slope = (k1[i] + 2 * (k2[i] + k3[i]) + k4[i]) / 6.0
+        y[i] = y[i] + slope * h
+    
+    x = x + h
+
+def Derivs(x, y, dydx):
+x = np.array ([0.0, 0.1, 0.2])
+y = np.array([0.0, 0.0, 0.0])
+n = 3
+h = 0.2
+
+RK4(x, y, n, h)
+
+print("Updated values after RK4 step:", y)
+	d. Routine to Determine Derivatives
+import numpy as np
+
+def Derivs(x, y):
+    dy1 = ...  # Replace with the actual expression for dy1
+    dy2 = ...  # Replace with the actual expression for dy2
+
+    return dy1, dy2
+
+x = np.array([1.1, 1.2, 1.3, 1.4])
+y = np.array([9.025013, 11.02318, 13.46374, 16.44465])
+
+dy1, dy2 = Derivs(x, y)
+
+print("dy1:", dy1)
+print("dy2:", dy2)
+2.5 driver & adaptive runge-kutta method
+	a. Driver Program
+import numpy as np
+from scipy.integrate import solve_ivp
+
+def Derivs(x, y):
+    # Define your differential equations here
+    # For example: dy/dx = f(x, y)
+    dy_dx = # Your expression for dy/dx
+    return dy_dx
+
+def adapt(x, y, dy, h, yscale, eps):
+    hnxt = # Your adaptation logic
+    return hnxt
+
+def driver_program(xi, xf, yi):
+    maxstep = 100
+    hi = 0.5
+    tiny = 1e-30
+    eps = 0.00005
+
+    print(xi, yi)
+    x = xi
+    y = yi
+    h = hi
+    istep = 0
+
+    while True:
+        if istep > maxstep and x < xf:
+            break
+
+        istep += 1
+        dy_dx = Derivs(x, y)
+        yscale = np.abs(y) + np.abs(h * dy_dx) + tiny
+
+        if x + h > xf:
+            h = xf - x
+
+        hnxt = adapt(x, y, dy_dx, h, yscale, eps)
+        print(x, y)
+
+        h = hnxt
+
+    return x, y
+
+xi = 0.0
+xf = 0.4
+yi = np.array([0.00000, 0.74140, 1.3718])
+
+final_x, final_y = driver_program(xi, xf, yi)
+print(f"Final values: x = {final_x}, y = {final_y}")
+b. Adaptive Step Routine
+import numpy as np
+
+def RKkc(y, dy, x, h, ytemp, yerr):
+def Adapt(x, y, dy, htry, yscal, eps):
+    safety = 0.9
+    econ = 1.89e-4
+    
+    h = htry
+    
+    while True:
+        RKkc(y, dy, x, h, ytemp, yerr)
+        emax = abs(yerr / yscal / eps)
+        
+        if emax < 1:
+            break
+        
+        htemp = safety * h * emax**(-0.25)
+        h = max(abs(htemp), 0.25 * abs(h))
+        xnew = x + h
+        
+        if xnew == x:
+            break
+
+    if emax > econ:
+        hnxt = safety * emax**(-0.2) * h
+    else:
+        hnxt = 4.0 * h
+    
+    x = x + h
+    y = ytemp
+    
+    return x, y, hnxt
+
+x = np.array([0.0, 0.2, 0.4])
+y = np.array([0.0, 0.74140, 1.3718])
+dy = # Define dy here
+htry = # Define htry here
+yscal = # Define yscal here
+eps = # Define eps here
+
+x, y, hnxt = Adapt(x, y, dy, htry, yscal, eps)
